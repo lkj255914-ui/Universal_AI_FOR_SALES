@@ -66,8 +66,28 @@ const FormattedReport = ({ report }: { report: string }) => {
         const title = (firstNewlineIndex !== -1 ? section.substring(0, firstNewlineIndex) : section).replace(/###/g, '').trim();
         let content = firstNewlineIndex !== -1 ? section.substring(firstNewlineIndex + 1) : '';
 
-        // Clean up content: remove bolding from labels that are now implicit
-        content = content.replace(/\*\*(.*?):\*\*/g, '$1:');
+        // Clean up content and convert to basic HTML
+        content = content
+          .trim()
+          .replace(/\*\*(.*?):\*\*/g, '<strong>$1:</strong>') // Bold labels
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Any other bolding
+          .split('\n') // Split by new lines to process paragraphs and lists
+          .map(line => {
+            line = line.trim();
+            if (line.startsWith('- ')) {
+              // It's a list item
+              return `<li>${line.substring(2)}</li>`;
+            }
+            if (line) {
+              // It's a paragraph
+              return `<p>${line}</p>`;
+            }
+            return '';
+          })
+          .join('');
+
+        // Wrap list items in <ul>
+        content = content.replace(/<li>/g, '<ul><li>').replace(/<\/li>(?!<li>)/g, '</li></ul>').replace(/<\/li><ul>/g, '</li><li>');
 
         const IconComponent = sectionIcons[title] || Building;
 
@@ -81,12 +101,9 @@ const FormattedReport = ({ report }: { report: string }) => {
                 <h3 className="text-lg font-semibold text-foreground">{title}</h3>
               </div>
               <div
-                className="prose prose-sm prose-p:text-muted-foreground prose-ul:text-muted-foreground prose-li:text-muted-foreground dark:prose-invert max-w-none"
+                className="prose prose-sm prose-p:text-muted-foreground prose-ul:list-disc prose-ul:ml-5 prose-li:text-muted-foreground dark:prose-invert max-w-none"
                 dangerouslySetInnerHTML={{
-                  __html: content
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\n/g, '<br />')
-                    .replace(/- (.*?)(<br \/>|$)/g, '<li class="ml-4 list-disc">$1</li>'),
+                  __html: content,
                 }}
               />
             </div>
