@@ -63,7 +63,7 @@ const generateCompanyReportFlow = ai.defineFlow(
     outputSchema: GenerateCompanyReportOutputSchema,
   },
   async input => {
-    const {text} = await generateCompanyReportPrompt(input);
-    return text!;
+    const response = await generateCompanyReportPrompt(input);
+    return response.text;
   }
 );
