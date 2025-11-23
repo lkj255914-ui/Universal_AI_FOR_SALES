@@ -29,7 +29,9 @@ const generateCompanyReportPrompt = ai.definePrompt({
   name: 'generateCompanyReportPrompt',
   input: {schema: GenerateCompanyReportInputSchema},
   output: {schema: GenerateCompanyReportOutputSchema},
-  prompt: `You are an AI-powered business analyst specializing in generating sales intelligence reports. Your task is to analyze a company based on its website content, company information, and a specific offer, and then generate a detailed 15-section business report.
+  prompt: `You are an AI-powered business analyst specializing in generating sales intelligence reports. Your task is to analyze a company and generate a detailed 15-section business report.
+
+Use your knowledge and search the web if necessary to gather information about the company.
 
 Company Name: {{{companyName}}}
 Website URL: {{{websiteURL}}}
@@ -62,6 +64,7 @@ const generateCompanyReportFlow = ai.defineFlow(
   },
   async input => {
     const response = await generateCompanyReportPrompt(input);
-    return response.text;
+    // Add a fallback to prevent null response
+    return response.text ?? 'Could not generate a report for this company.';
   }
 );
