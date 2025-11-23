@@ -59,7 +59,7 @@ export default function Home() {
         if (result.success) {
           setCompanies((prev) =>
             prev.map((c) =>
-              c.id === company.id ? { ...c, status: 'completed', report: result.report } : c
+              c.id === company.id ? { ...c, status: 'completed', report: result.report, formattedReport: result.formattedReport } : c
             )
           );
         } else {

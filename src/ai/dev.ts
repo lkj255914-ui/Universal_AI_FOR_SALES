@@ -3,3 +3,4 @@ config();
 
 import '@/ai/flows/generate-company-report.ts';
 import '@/ai/flows/display-actionable-insights.ts';
+import '@/ai/flows/format-report.ts';

@@ -10,5 +10,6 @@ export type ProcessedCompany = Company & {
   id: number;
   status: ProcessStatus;
   report?: string;
+  formattedReport?: string;
   error?: string;
 };
