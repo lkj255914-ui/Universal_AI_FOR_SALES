@@ -14,7 +14,6 @@ import {z} from 'genkit';
 const GenerateCompanyReportInputSchema = z.object({
   companyName: z.string().describe('The name of the company.'),
   websiteURL: z.string().url().describe('The URL of the company website.'),
-  websiteTextContent: z.string().describe('Extracted text content from the company website.'),
   offer: z.string().describe('The offer to be analyzed in the context of the company.'),
 });
 export type GenerateCompanyReportInput = z.infer<typeof GenerateCompanyReportInputSchema>;
@@ -35,7 +34,6 @@ const generateCompanyReportPrompt = ai.definePrompt({
 Company Name: {{{companyName}}}
 Website URL: {{{websiteURL}}}
 Offer: {{{offer}}}
-Website Text Content: {{{websiteTextContent}}}
 
 Generate a 15-section business report that covers the following aspects:
 
