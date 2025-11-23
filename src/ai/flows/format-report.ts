@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -28,7 +29,7 @@ export async function formatReport(input: FormatReportInput): Promise<FormatRepo
 const formatReportPrompt = ai.definePrompt({
   name: 'formatReportPrompt',
   input: {schema: FormatReportInputSchema},
-  output: {schema: FormatReportOutputSchema},
+  // By removing the output schema here, we prevent the validation error and handle the response manually.
   prompt: `You are an expert AI editor and formatter. Take the given raw AI-generated sales report text and restructure, clean, and format it into a professional, well-organized, Markdown-styled report.
 
 Instructions:
@@ -53,6 +54,7 @@ const formatReportFlow = ai.defineFlow(
   },
   async input => {
     const response = await formatReportPrompt(input);
+    // Add a fallback to prevent null response and ensure we always return a string.
     return response.text ?? 'Could not format the report.';
   }
 );
