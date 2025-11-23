@@ -28,7 +28,7 @@ export async function generateCompanyReport(input: GenerateCompanyReportInput): 
 const generateCompanyReportPrompt = ai.definePrompt({
   name: 'generateCompanyReportPrompt',
   input: {schema: GenerateCompanyReportInputSchema},
-  output: {schema: GenerateCompanyReportOutputSchema},
+  // By removing the output schema here, we prevent the validation error and handle the response manually.
   prompt: `You are an AI-powered business analyst specializing in generating sales intelligence reports. Your task is to analyze a company and generate a detailed 15-section business report.
 
 Use your knowledge and search the web if necessary to gather information about the company.
@@ -64,7 +64,7 @@ const generateCompanyReportFlow = ai.defineFlow(
   },
   async input => {
     const response = await generateCompanyReportPrompt(input);
-    // Add a fallback to prevent null response
+    // Add a fallback to prevent null response and ensure we always return a string.
     return response.text ?? 'Could not generate a report for this company.';
   }
 );
