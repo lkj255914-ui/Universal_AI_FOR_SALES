@@ -10,7 +10,7 @@ import { FileUploadCard } from '@/components/pages/home/file-upload-card';
 import { ResultsTable } from '@/components/pages/home/results-table';
 import { ReportViewDialog } from '@/components/pages/home/report-view-dialog';
 import { useFirebase, useUser } from '@/firebase';
-import { getAuth, signOut } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -33,10 +33,21 @@ export default function Home() {
   const { auth } = useFirebase();
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/login');
+    if (!isUserLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (!user.emailVerified) {
+        // If email is not verified, show a message and log them out to force verification.
+        toast({
+          variant: 'destructive',
+          title: 'Email not verified',
+          description: 'Please verify your email to access the dashboard.',
+        });
+        signOut(auth);
+        router.push('/login');
+      }
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, auth, toast]);
 
   const handleFileParsed = (parsedCompanies: Company[]) => {
     const processedCompanies: ProcessedCompany[] = parsedCompanies.map((company, index) => ({
@@ -121,7 +132,7 @@ export default function Home() {
     }
   };
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || !user || !user.emailVerified) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -142,13 +153,13 @@ export default function Home() {
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar>
                   <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
-                  <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                  <AvatarFallback>{user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
               <DropdownMenuLabel>
-                <p className="font-semibold">{user.displayName}</p>
+                <p className="font-semibold">{user.displayName || 'User'}</p>
                 <p className="text-xs text-muted-foreground font-normal">{user.email}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

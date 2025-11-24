@@ -1,11 +1,20 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+} from 'firebase/auth';
 import { useFirebase, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -36,15 +45,21 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      router.push('/');
+      if (user.emailVerified) {
+        router.push('/');
+      }
     }
   }, [user, isUserLoading, router]);
 
-  const handleSignIn = async () => {
+  const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
+    setIsLoading(true);
     try {
       await signInWithPopup(auth, provider);
       toast({
@@ -59,6 +74,64 @@ export default function LoginPage() {
         title: 'Sign-in failed',
         description: 'Could not sign in with Google. Please try again.',
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (userCredential.user.emailVerified) {
+        toast({
+          title: 'Sign-in successful!',
+          description: "You're now logged in.",
+        });
+        router.push('/');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Email not verified',
+          description: 'Please check your email to verify your account before signing in.',
+        });
+        await auth.signOut();
+      }
+    } catch (error: any) {
+      console.error('Error signing in with email:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Sign-in failed',
+        description: error.message || 'Could not sign in. Please check your credentials.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(userCredential.user);
+      await auth.signOut(); // Sign out the user until they verify their email
+      toast({
+        title: 'Verification email sent!',
+        description: 'Please check your inbox to verify your email address.',
+      });
+      setEmail('');
+      setPassword('');
+    } catch (error: any) {
+      console.error('Error signing up with email:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Sign-up failed',
+        description: error.message || 'Could not create an account. Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -78,18 +151,97 @@ export default function LoginPage() {
             <div className="mx-auto mb-4">
               <Logo />
             </div>
-            <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>Sign in to access your sales intelligence dashboard.</CardDescription>
+            <CardTitle className="text-2xl">Welcome</CardTitle>
+            <CardDescription>Sign in or create an account to continue.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button
-              variant="outline"
-              className="w-full text-base py-6"
-              onClick={handleSignIn}
-            >
-              <GoogleIcon />
-              <span className="ml-3">Sign in with Google</span>
-            </Button>
+            <Tabs defaultValue="signin">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+              <TabsContent value="signin">
+                <form onSubmit={handleEmailSignIn}>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email-signin">Email</Label>
+                      <Input
+                        id="email-signin"
+                        type="email"
+                        placeholder="m@example.com"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="password-signin">Password</Label>
+                      <Input
+                        id="password-signin"
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? <Loader2 className="animate-spin" /> : 'Sign In'}
+                    </Button>
+                  </div>
+                </form>
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading}
+                >
+                  <GoogleIcon />
+                  <span className="ml-3">Sign in with Google</span>
+                </Button>
+              </TabsContent>
+              <TabsContent value="signup">
+                <form onSubmit={handleEmailSignUp}>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email-signup">Email</Label>
+                      <Input
+                        id="email-signup"
+                        type="email"
+                        placeholder="m@example.com"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="password-signup">Password</Label>
+                      <Input
+                        id="password-signup"
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? <Loader2 className="animate-spin" /> : 'Create Account'}
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>

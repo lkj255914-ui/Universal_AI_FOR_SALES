@@ -31,9 +31,7 @@
       },
       "required": [
         "id",
-        "email",
-        "displayName",
-        "createdAt"
+        "email"
       ]
     },
     "Report": {
@@ -81,7 +79,8 @@
   },
   "auth": {
     "providers": [
-      "google.com"
+      "google.com",
+      "password"
     ]
   },
   "firestore": {
