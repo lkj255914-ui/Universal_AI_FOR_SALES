@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   const [companies, setCompanies] = useState<ProcessedCompany[]>([]);
@@ -37,7 +38,6 @@ export default function Home() {
       if (!user) {
         router.push('/login');
       } else if (!user.emailVerified) {
-        // If email is not verified, show a message and log them out to force verification.
         toast({
           variant: 'destructive',
           title: 'Email not verified',
@@ -52,8 +52,9 @@ export default function Home() {
   const handleFileParsed = (parsedCompanies: Company[]) => {
     const processedCompanies: ProcessedCompany[] = parsedCompanies.map((company, index) => ({
       ...company,
-      id: index,
+      id: `${Date.now()}-${index}`, // Use a more robust unique ID
       status: 'queued',
+      createdAt: new Date().toISOString(),
     }));
     setCompanies(processedCompanies);
     toast({
@@ -71,6 +72,14 @@ export default function Home() {
       });
       return;
     }
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Not authenticated',
+        description: 'You must be logged in to process companies.',
+      });
+      return;
+    }
 
     setIsProcessing(true);
     toast({
@@ -84,20 +93,16 @@ export default function Home() {
       );
 
       try {
-        const result = await processCompany({
-          companyName: company.companyName,
-          websiteURL: company.websiteURL,
-          offer: company.offer,
-        });
+        const result = await processCompany(user.uid, company);
 
-        if (result.success) {
+        if (result.success && result.reportId) {
           setCompanies((prev) =>
             prev.map((c) =>
-              c.id === company.id ? { ...c, status: 'completed', report: result.report, formattedReport: result.formattedReport } : c
+              c.id === company.id ? { ...c, id: result.reportId!, status: 'completed' } : c
             )
           );
         } else {
-          throw new Error(result.error);
+          throw new Error(result.error || 'An unknown error occurred.');
         }
       } catch (error) {
         setCompanies((prev) =>
@@ -114,7 +119,7 @@ export default function Home() {
     setIsProcessing(false);
     toast({
       title: 'Processing complete!',
-      description: 'All company reports have been generated.',
+      description: 'All company reports have been generated. View them on your dashboard.',
     });
   };
 
@@ -162,6 +167,10 @@ export default function Home() {
                 <p className="font-semibold">{user.displayName || 'User'}</p>
                 <p className="text-xs text-muted-foreground font-normal">{user.email}</p>
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleSignOut}>
                 Sign out

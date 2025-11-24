@@ -13,11 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ProcessedCompany } from '@/app/types';
-import { Loader2, FileText, CheckCircle, AlertCircle, Clock, XCircle } from 'lucide-react';
+import { Loader2, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 
 type ResultsTableProps = {
   companies: ProcessedCompany[];
   onViewReport: (company: ProcessedCompany) => void;
+  title?: string;
 };
 
 const StatusIndicator = ({ company }: { company: ProcessedCompany }) => {
@@ -64,50 +65,54 @@ const StatusIndicator = ({ company }: { company: ProcessedCompany }) => {
   }
 };
 
-export function ResultsTable({ companies, onViewReport }: ResultsTableProps) {
+export function ResultsTable({ companies, onViewReport, title = "Step 2: Review Your Reports" }: ResultsTableProps) {
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <FileText className="h-5 w-5" />
-          Step 2: Review Your Reports
+          {title}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[250px]">Company Name</TableHead>
-                <TableHead>Offer</TableHead>
-                <TableHead className="w-[150px] text-center">Status</TableHead>
-                <TableHead className="w-[150px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {companies.map((company) => (
-                <TableRow key={company.id}>
-                  <TableCell className="font-medium">{company.companyName}</TableCell>
-                  <TableCell className="text-muted-foreground">{company.offer}</TableCell>
-                  <TableCell className="text-center">
-                    <StatusIndicator company={company} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onViewReport(company)}
-                      disabled={company.status !== 'completed'}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      View Report
-                    </Button>
-                  </TableCell>
+        {companies.length > 0 ? (
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[250px]">Company Name</TableHead>
+                  <TableHead>Offer</TableHead>
+                  <TableHead className="w-[150px] text-center">Status</TableHead>
+                  <TableHead className="w-[150px] text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {companies.map((company) => (
+                  <TableRow key={company.id}>
+                    <TableCell className="font-medium">{company.companyName}</TableCell>
+                    <TableCell className="text-muted-foreground">{company.offer}</TableCell>
+                    <TableCell className="text-center">
+                      <StatusIndicator company={company} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onViewReport(company)}
+                        disabled={company.status !== 'completed'}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        View Report
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-8">No reports found.</p>
+        )}
       </CardContent>
     </Card>
   );
