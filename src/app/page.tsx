@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ProcessedCompany, Company } from '@/app/types';
 import { useToast } from '@/hooks/use-toast';
 import { processCompany } from '@/app/actions';
@@ -8,12 +9,34 @@ import { Logo } from '@/components/logo';
 import { FileUploadCard } from '@/components/pages/home/file-upload-card';
 import { ResultsTable } from '@/components/pages/home/results-table';
 import { ReportViewDialog } from '@/components/pages/home/report-view-dialog';
+import { useFirebase, useUser } from '@/firebase';
+import { getAuth, signOut } from 'firebase/auth';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const [companies, setCompanies] = useState<ProcessedCompany[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<ProcessedCompany | null>(null);
   const { toast } = useToast();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+  const { auth } = useFirebase();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
 
   const handleFileParsed = (parsedCompanies: Company[]) => {
     const processedCompanies: ProcessedCompany[] = parsedCompanies.map((company, index) => ({
@@ -84,36 +107,85 @@ export default function Home() {
     });
   };
 
-  return (
-    <main className="container mx-auto px-4 py-8 md:py-12">
-      <header className="text-center mb-8 md:mb-12">
-        <div className="inline-block">
-          <Logo />
-        </div>
-        <p className="mt-2 text-lg text-muted-foreground max-w-2xl mx-auto">
-          Upload a list of companies to automatically generate personalized sales intelligence
-          reports.
-        </p>
-      </header>
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Sign-out failed',
+        description: 'An error occurred while signing out. Please try again.',
+      });
+    }
+  };
 
-      <div className="max-w-4xl mx-auto grid gap-8">
-        <FileUploadCard
-          onFileParsed={handleFileParsed}
-          onProcess={handleProcessCompanies}
-          isProcessing={isProcessing}
-          hasCompanies={companies.length > 0}
-        />
-
-        {companies.length > 0 && (
-          <ResultsTable companies={companies} onViewReport={setSelectedCompany} />
-        )}
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
+    );
+  }
 
-      <ReportViewDialog
-        company={selectedCompany}
-        open={!!selectedCompany}
-        onOpenChange={(isOpen) => !isOpen && setSelectedCompany(null)}
-      />
-    </main>
+  return (
+    <div className="flex flex-col min-h-screen">
+      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+        <div className="container mx-auto flex items-center justify-between h-16 px-4">
+          <div className="flex items-center gap-4">
+            <Logo />
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                <Avatar>
+                  <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
+                  <AvatarFallback>{user.displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end">
+              <DropdownMenuLabel>
+                <p className="font-semibold">{user.displayName}</p>
+                <p className="text-xs text-muted-foreground font-normal">{user.email}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={handleSignOut}>
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="border-b"></div>
+      </header>
+      <main className="container mx-auto px-4 py-8 md:py-12 flex-grow">
+        <div className="text-center mb-8 md:mb-12">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">Sales Intelligence</h1>
+          <p className="mt-2 text-lg text-muted-foreground max-w-2xl mx-auto">
+            Upload a list of companies to automatically generate personalized sales intelligence reports.
+          </p>
+        </div>
+        <div className="max-w-4xl mx-auto grid gap-8">
+          <FileUploadCard
+            onFileParsed={handleFileParsed}
+            onProcess={handleProcessCompanies}
+            isProcessing={isProcessing}
+            hasCompanies={companies.length > 0}
+          />
+
+          {companies.length > 0 && (
+            <ResultsTable companies={companies} onViewReport={setSelectedCompany} />
+          )}
+        </div>
+
+        <ReportViewDialog
+          company={selectedCompany}
+          open={!!selectedCompany}
+          onOpenChange={(isOpen) => !isOpen && setSelectedCompany(null)}
+        />
+      </main>
+    </div>
   );
 }

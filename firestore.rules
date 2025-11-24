@@ -1,95 +1,21 @@
-/**
- * Core Philosophy: This ruleset enforces a strict user-ownership model where all user-related data is private.
- * Data Structure: All data is organized hierarchically under the `/users/{userId}` path. A user's profile is stored in the root document, and their private data, such as reports, is stored in subcollections under that document (e.g., `/users/{userId}/reports/{reportId}`). This path-based structure is the primary mechanism for authorization.
- * Key Security Decisions:
- * - Default Deny: All paths are closed by default. Access must be explicitly granted.
- * - Strict Ownership: Users can only read or write data within their own document tree (`/users/{userId}/...`). Cross-user access is forbidden.
- * - No Public Data: There are no globally readable collections.
- * - No User Listing: It is not possible for any client to list all documents in the top-level `/users` collection.
- * - Self-Service Profile: A newly authenticated user is permitted to create their own user profile document, but they cannot create one for anyone else.
- * Denormalization for Authorization: Security is based on the `userId` in the document path, which must match the authenticated user's UID. For the user profile document itself, we enforce that the `id` field within the document matches the document ID in the path upon creation to ensure relational integrity.
- * Structural Segregation: The separation of user data into distinct user-owned document trees (`/users/{userId}`) provides strong security guarantees and simplifies list queries for user-specific content.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for improved readability and reuse.
-
-    /**
-     * Checks if a user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user's UID matches the given userId from the path.
-     * This is the foundation of the user-ownership model.
-     * @param userId The user ID from the document path (e.g., from `/users/{userId}`).
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * A stricter version of isOwner for update and delete operations.
-     * It ensures the document being modified already exists.
-     * @param userId The user ID from the document path.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * On create, validates that the internal `id` field of the user document
-     * matches the document's ID, which is the user's auth UID.
-     * This enforces relational integrity from the client.
-     */
-    function isCreatingOwnUserDoc(userId) {
-      return request.resource.data.id == userId;
-    }
-
-    /**
-     * On update, ensures the internal `id` field of the user document cannot be changed.
-     * This prevents re-assigning the profile document to a different user.
-     */
-    function isUserDocIdImmutable() {
-      return request.resource.data.id == resource.data.id;
-    }
-
-    /**
-     * @description Rules for a user's profile document.
-     * @path /users/{userId}
-     * @allow (create) An authenticated user with UID 'user_abc' creating their own profile at `/users/user_abc` with `{ "id": "user_abc", ... }`.
-     * @deny (create) An authenticated user 'user_abc' trying to create a profile for 'user_xyz' at `/users/user_xyz`.
-     * @deny (update) An anonymous user trying to update any user profile.
-     * @deny (get) User 'user_abc' trying to read the profile of 'user_xyz'.
-     * @principle Restricts access to a user's own data tree and allows for self-service profile creation.
-     */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && isCreatingOwnUserDoc(userId);
-      allow update: if isExistingOwner(userId) && isUserDocIdImmutable();
-      allow delete: if isExistingOwner(userId);
+      allow read, write: if isOwner(userId);
     }
 
-    /**
-     * @description Rules for user-specific AI reports, stored in a subcollection.
-     * @path /users/{userId}/reports/{reportId}
-     * @allow (create) An authenticated user 'user_abc' creating a report at `/users/user_abc/reports/report_123`.
-     * @allow (list) An authenticated user 'user_abc' listing all their reports at `/users/user_abc/reports`.
-     * @deny (get) User 'user_abc' trying to read a report from `/users/user_xyz/reports/report_456`.
-     * @deny (delete) An anonymous user trying to delete any report.
-     * @principle Enforces document ownership for a subcollection based on the parent document's path.
-     */
     match /users/{userId}/reports/{reportId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow read, list, create, update, delete: if isOwner(userId);
     }
   }
 }
