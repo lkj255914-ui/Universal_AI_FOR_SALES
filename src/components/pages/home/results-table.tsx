@@ -101,7 +101,6 @@ export function ResultsTable({ companies, onViewReport, title = "Step 2: Review 
                         onClick={() => onViewReport(company)}
                         disabled={company.status !== 'completed'}
                       >
-                        <FileText className="mr-2 h-4 w-4" />
                         View Report
                       </Button>
                     </TableCell>

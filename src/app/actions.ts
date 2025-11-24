@@ -3,14 +3,13 @@
 import { generateCompanyReport } from '@/ai/flows/generate-company-report';
 import { formatReport } from '@/ai/flows/format-report';
 import type { Company } from '@/app/types';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { serviceAccount } from '@/firebase/service-account';
 
+// Initialize Firebase Admin SDK
+// It will automatically use the GOOGLE_APPLICATION_CREDENTIALS environment variable
 if (!getApps().length) {
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
+  initializeApp();
 }
 
 const db = getFirestore();

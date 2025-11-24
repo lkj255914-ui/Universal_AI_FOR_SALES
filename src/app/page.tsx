@@ -196,7 +196,7 @@ export default function Home() {
           />
 
           {companies.length > 0 && (
-            <ResultsTable companies={companies} onViewReport={setSelectedCompany} />
+            <ResultsTable companies={companies} onViewReport={setSelectedCompany} title="Processing Queue" />
           )}
         </div>
 
